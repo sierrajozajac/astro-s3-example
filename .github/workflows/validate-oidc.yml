@@ -1,0 +1,57 @@
+# TEMPORARY. Proves the keyless OIDC path end to end against the tf-demo stack.
+# Delete once validation is done; it is not part of the example.
+name: validate-oidc
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  sast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install semgrep
+      - run: semgrep --config auto --error .
+
+  deploy:
+    needs: sast
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Stands in for `npm run build`. This repo has no Astro site.
+      - name: Fake a build
+        run: |
+          mkdir -p dist
+          echo "<h1>deployed by github actions via oidc, run ${GITHUB_RUN_ID}</h1>" > dist/index.html
+          echo "<h1>404</h1>" > dist/404.html
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::803896369836:role/tf-demo-github-actions-deploy
+          aws-region: us-west-2
+
+      # Proves we are the role, not a user, and holding temporary credentials.
+      - name: Who am I
+        run: aws sts get-caller-identity
+
+      - run: aws s3 sync ./dist s3://tf-demo-sierrajozajac-origin --delete
+
+      - run: aws cloudfront create-invalidation --distribution-id E2WQTZP0T1FG5G --paths "/*"
+
+      # The role must NOT be able to do anything else. This command is expected
+      # to FAIL with AccessDenied; if it succeeds, the role is over-scoped.
+      - name: Role is scoped (expect AccessDenied)
+        run: |
+          if aws s3 ls 2>/dev/null; then
+            echo "OVER-SCOPED: the role could list all buckets"
+            exit 1
+          else
+            echo "correctly denied: role cannot list buckets"
+          fi
