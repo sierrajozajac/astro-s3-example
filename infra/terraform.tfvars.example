@@ -1,0 +1,25 @@
+# Copy this file to terraform.tfvars and fill in your own values.
+#
+#   cp terraform.tfvars.example terraform.tfvars
+#
+# terraform.tfvars is gitignored. Nothing here is secret, but it is yours.
+
+# UPDATE ME: your apex domain. A Route 53 public hosted zone for it must
+# already exist in this AWS account.
+domain_name = "example.com"
+
+# UPDATE ME: S3 bucket names are globally unique across all of AWS, so a plain
+# "example.com" will likely collide. Add something specific to you.
+bucket_name = "example-com-site-origin"
+
+# UPDATE ME: the GitHub repo that will deploy, as owner/name. This is the only
+# repo that can assume the deploy role.
+github_repo = "your-username/your-site-repo"
+
+# UPDATE ME (optional): region for the bucket and IAM resources. The ACM
+# certificate is always created in us-east-1 no matter what you put here,
+# because CloudFront requires it.
+region = "us-west-2"
+
+# UPDATE ME (optional): the only branch allowed to deploy.
+deploy_branch = "main"

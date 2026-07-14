@@ -1,0 +1,14 @@
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+
+# Your real values. Commit terraform.tfvars.example instead.
+terraform.tfvars
+*.auto.tfvars
+
+# Lockfile: keep this one. It pins provider versions for everyone.
+!.terraform.lock.hcl
