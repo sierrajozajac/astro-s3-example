@@ -1,5 +1,7 @@
-# Terraform
+# Terraform working directory and state. Products of `terraform init` and
+# `terraform apply`, never source.
 **/.terraform/*
+.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
 *.tfplan
@@ -9,6 +11,3 @@ crash.*.log
 # Your real values. Commit terraform.tfvars.example instead.
 terraform.tfvars
 *.auto.tfvars
-
-# Lockfile: keep this one. It pins provider versions for everyone.
-!.terraform.lock.hcl
