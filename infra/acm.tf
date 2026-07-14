@@ -1,8 +1,12 @@
 # The hosted zone must already exist. Terraform reads it; it does not create it.
 # If you registered the domain elsewhere, create the zone in Route 53 first and
 # point your registrar at its nameservers before running this.
+#
+# This is the ZONE, which is not always the same as the domain. Serving
+# staging.example.com from the example.com zone means hosted_zone_name =
+# "example.com" while domain_name = "staging.example.com".
 data "aws_route53_zone" "site" {
-  name         = var.domain_name
+  name         = local.zone_name
   private_zone = false
 }
 

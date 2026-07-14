@@ -4,9 +4,33 @@
 #
 # terraform.tfvars is gitignored. Nothing here is secret, but it is yours.
 
-# UPDATE ME: your apex domain. A Route 53 public hosted zone for it must
-# already exist in this AWS account.
+# UPDATE ME: the domain the site is served on.
 domain_name = "example.com"
+
+# UPDATE ME (optional): the Route 53 hosted zone to write records into. Leave
+# it empty when domain_name is an apex, which is the common case. Set it to the
+# PARENT zone when domain_name is a subdomain:
+#
+#   domain_name      = "staging.example.com"
+#   hosted_zone_name = "example.com"
+#
+# The zone must already exist. Terraform reads it, it does not create it.
+hosted_zone_name = ""
+
+# UPDATE ME: AWS allows exactly ONE GitHub OIDC provider per account. Check
+# whether yours already has one:
+#
+#   aws iam list-open-id-connect-providers
+#
+# If it does, set this to false and the existing provider is reused. Leaving it
+# true fails with EntityAlreadyExists. Do NOT `terraform import` a provider you
+# share with other roles: a later `terraform destroy` would delete it for them
+# too.
+create_oidc_provider = true
+
+# UPDATE ME (optional): the deploy role's name. Change it if you run this more
+# than once in the same account.
+role_name = "github-actions-deploy"
 
 # UPDATE ME: S3 bucket names are globally unique across all of AWS, so a plain
 # "example.com" will likely collide. Add something specific to you.

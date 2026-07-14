@@ -74,13 +74,16 @@ curl -I https://example.com/index.html
 
 You want `HTTP/2 200`. Same object, reachable only through the CDN.
 
-## Two things that trip people up
+## Three things that trip people up
 
-**One OIDC provider per account.** AWS allows exactly one identity provider per URL. If your account already has a GitHub one, importing it beats creating a second:
+**One OIDC provider per account.** AWS allows exactly one identity provider per URL, so if your account already has a GitHub one, `terraform apply` fails with `EntityAlreadyExists`. Check before you run:
 
 ```bash
-terraform import aws_iam_openid_connect_provider.github \
-  arn:aws:iam::<your-account-id>:oidc-provider/token.actions.githubusercontent.com
+aws iam list-open-id-connect-providers
 ```
+
+If it is already there, set `create_oidc_provider = false` and the existing provider is looked up and reused. Do not `terraform import` a provider you share with other roles: it would join this stack's state, and a later `terraform destroy` would delete it out from under everything else that depends on it.
+
+**New AWS accounts cannot create CloudFront distributions.** The apply dies with `AccessDenied: Your account must be verified before you can add new CloudFront resources`. This is an account gate, not a problem with this code. Open an AWS Support case to get verified; it usually clears within a day.
 
 **The OIDC thumbprint is a dummy value on purpose.** AWS validates the GitHub endpoint against its own trust store now. The API still requires the field, so the code passes the placeholder AWS's own docs use.
