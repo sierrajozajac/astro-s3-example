@@ -1,0 +1,67 @@
+# Copy this file into the repo that holds your Astro site, at:
+#
+#   .github/workflows/deploy.yml
+#
+# It lives here rather than in this repo's own .github/ directory because this
+# repo is infrastructure only. There is no Astro site here to build, so an
+# active workflow would fail on every push.
+#
+# Nothing in this file is secret. The three values it reads are repository
+# VARIABLES (Settings > Secrets and variables > Actions > Variables), not
+# secrets, and they come from `terraform output`:
+#
+#   AWS_DEPLOY_ROLE_ARN         <- terraform output deploy_role_arn
+#   S3_BUCKET                   <- terraform output bucket_name
+#   CLOUDFRONT_DISTRIBUTION_ID  <- terraform output distribution_id
+
+name: deploy
+
+on:
+  push:
+    # UPDATE ME: must match `deploy_branch` in terraform.tfvars. The IAM trust
+    # policy only accepts a token from this branch, so a mismatch here fails at
+    # the credentials step with "Not authorized to perform sts:AssumeRoleWithWebIdentity".
+    branches: [main]
+
+permissions:
+  id-token: write # required for OIDC. Without this the role assumption fails.
+  contents: read
+
+jobs:
+  sast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install semgrep
+      # --error makes a finding fail the job, which is what gates the deploy.
+      - run: semgrep --config auto --error .
+
+  deploy:
+    # The gate. Without `needs`, both jobs run in parallel and a failing scan
+    # ships anyway.
+    needs: sast
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # UPDATE ME: match the Node version your site builds with locally.
+          node-version: 20
+
+      - run: npm ci
+      - run: npm run build
+
+      # Exchanges the GitHub OIDC token for short-lived AWS credentials. No
+      # AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY anywhere in this repo.
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          # UPDATE ME: match `region` in terraform.tfvars, the region your
+          # bucket is in. This is NOT us-east-1 unless your bucket is.
+          aws-region: us-west-2
+
+      # UPDATE ME: `./dist` is Astro's default build output. Change it if yours differs.
+      - run: aws s3 sync ./dist s3://${{ vars.S3_BUCKET }} --delete
+
+      - run: aws cloudfront create-invalidation --distribution-id ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
