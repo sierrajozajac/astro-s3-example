@@ -31,7 +31,11 @@ jobs:
   sast:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # Actions are pinned to a commit SHA, not a tag like @v4. A tag is
+      # mutable, so @v4 could be repointed at malicious code; a SHA cannot.
+      # The `# v4` comment is just for humans. Semgrep's own default ruleset
+      # fails the build on mutable tags, so unpinning these breaks the gate.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - run: pip install semgrep
       # --error makes a finding fail the job, which is what gates the deploy.
       - run: semgrep --config auto --error .
@@ -42,9 +46,9 @@ jobs:
     needs: sast
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           # UPDATE ME: match the Node version your site builds with locally.
           node-version: 20
@@ -54,7 +58,7 @@ jobs:
 
       # Exchanges the GitHub OIDC token for short-lived AWS credentials. No
       # AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY anywhere in this repo.
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           # UPDATE ME: match `region` in terraform.tfvars, the region your
